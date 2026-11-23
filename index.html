@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>VR-Schulrundgang – 65 Standorte (V2-Technik)</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;font-family:Arial,sans-serif}
+#ui{position:fixed;z-index:10;left:14px;top:14px;max-width:390px;padding:14px 16px;border-radius:12px;background:rgba(18,22,28,.92);color:white}
+#ui h1{font-size:18px;margin:0 0 8px}
+#ui p{font-size:14px;line-height:1.35;margin:7px 0}
+#vrStart{font:inherit;font-weight:700;padding:10px 15px;border:0;border-radius:9px;background:#55c96b;color:#07120a;cursor:pointer}
+#vrStart:disabled{opacity:.5}
+#sceneName{font-weight:700}
+#canvas{display:block;width:100%;height:100%}
+body.invr #ui{display:none}
+</style>
+</head>
+<body>
+<div id="ui">
+  <h1>VR-Schulrundgang – 65 Standorte (V2-Technik)</h1>
+  <p id="support">WebXR wird geprüft …</p>
+  <p>Aktuelle Szene: <span id="sceneName">Haupteingang</span></p>
+  <p id="targets"></p>
+  <button id="vrStart" disabled>VR starten</button>
+  <p>V2-Technik mit 65 Standorten. Die Verbindungen stammen aus dem ursprünglichen Schulrundgang. Einige Übergänge müssen vor Ort überprüft werden.</p>
+</div>
+<canvas id="canvas"></canvas>
+
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
+import { VRButton } from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/webxr/VRButton.js";
+
+const SCENES = {"0-haupteingang":{"name":"Haupteingang","file":"images/0-haupteingang.jpg","links":[{"target":"1-eingangsbereich","yaw":0.04549071169454422,"pitch":0.3796920176444676}]},"1-eingangsbereich":{"name":"Eingangsbereich","file":"images/1-eingangsbereich.jpg","links":[{"target":"35-treppe1-keller","yaw":1.269249438274045,"pitch":0.5298442174283391},{"target":"0-haupteingang","yaw":-3.0075493525594883,"pitch":0.3073517668298642},{"target":"12-1stock-treppe1","yaw":0.8141428871353575,"pitch":0.36552178527118073},{"target":"2-erdgeschoss-1","yaw":0.29385782827829665,"pitch":0.3617425924347675}]},"2-erdgeschoss-1":{"name":"Erdgeschoss 1","file":"images/2-erdgeschoss-1.jpg","links":[{"target":"3-erdgeschoss-2","yaw":0.3373497305276967,"pitch":0.4242940808481599},{"target":"1-eingangsbereich","yaw":-2.7134840040005557,"pitch":0.32911626794419746}]},"3-erdgeschoss-2":{"name":"Erdgeschoss 2","file":"images/3-erdgeschoss-2.jpg","links":[{"target":"4-erdgeschoss-3","yaw":0.3773572471599529,"pitch":0.2542780841314922},{"target":"2-erdgeschoss-1","yaw":-2.9976427144780953,"pitch":0.2660839694242014}]},"4-erdgeschoss-3":{"name":"Erdgeschoss 3","file":"images/4-erdgeschoss-3.jpg","links":[{"target":"5-treppenhaus-2","yaw":-0.03497233827366486,"pitch":0.8501839683961361},{"target":"3-erdgeschoss-2","yaw":-2.880688391340245,"pitch":0.37241759205933533},{"target":"61-gang-1","yaw":1.0979394662553368,"pitch":0.7183872869538597}]},"5-treppenhaus-2":{"name":"Treppenhaus 2","file":"images/5-treppenhaus-2.jpg","links":[{"target":"4-erdgeschoss-3","yaw":1.7770103069589327,"pitch":0.4466734685982203},{"target":"6-treppenhaus-2-1-stock","yaw":0.17475085529483536,"pitch":0.1889458972940936},{"target":"38-keller-3-treppe-2","yaw":-0.3471024191063883,"pitch":0.6235193887908306}]},"6-treppenhaus-2-1-stock":{"name":"Treppenhaus 2-1. Stock (Ersatzansicht)","file":"images/5-treppenhaus-2.jpg","links":[{"target":"5-treppenhaus-2","yaw":-2.9206411022039536,"pitch":0.7266561906419522},{"target":"7-1stock-1","yaw":-0.39830650195284356,"pitch":0.4456061976421104},{"target":"13-treppe2-2stock","yaw":-1.8348807841163364,"pitch":0.4160134041974697}]},"7-1stock-1":{"name":"1.Stock 1","file":"images/7-1stock-1.jpg","links":[{"target":"8-1stock-2","yaw":0.1358345619486876,"pitch":0.37788988453733197},{"target":"10-1stock-4","yaw":1.2748347351934477,"pitch":0.45780526868358606},{"target":"6-treppenhaus-2-1-stock","yaw":-2.869299342373445,"pitch":0.3549580398849521}]},"8-1stock-2":{"name":"1.Stock 2","file":"images/8-1stock-2.jpg","links":[{"target":"7-1stock-1","yaw":-3.096848477366386,"pitch":0.24223745224508342},{"target":"9-1stock-3","yaw":0.04362830712657484,"pitch":0.35729435287391986}]},"9-1stock-3":{"name":"1.Stock 3","file":"images/9-1stock-3.jpg","links":[{"target":"21-2stock-8","yaw":-0.09501319864848412,"pitch":0.5297622015341155},{"target":"8-1stock-2","yaw":-2.862041171910569,"pitch":0.28622734114138204}]},"10-1stock-4":{"name":"1.Stock 4","file":"images/10-1stock-4.jpg","links":[{"target":"11-1stock-bos-sekretariat","yaw":0.11729373397944443,"pitch":0.16608581391176713},{"target":"7-1stock-1","yaw":-2.84713796641738,"pitch":0.3307931947828813}]},"11-1stock-bos-sekretariat":{"name":"1.Stock-BOS-Sekretariat","file":"images/11-1stock-bos-sekretariat.jpg","links":[{"target":"12-1stock-treppe1","yaw":-0.14788733747656835,"pitch":0.7556311375627587},{"target":"10-1stock-4","yaw":3.1312844189660787,"pitch":0.1800911133412484}]},"12-1stock-treppe1":{"name":"1.Stock-Treppe1","file":"images/12-1stock-treppe1.jpg","links":[{"target":"1-eingangsbereich","yaw":2.7613458718040134,"pitch":0.6651665218523952},{"target":"11-1stock-bos-sekretariat","yaw":-0.019105955403071917,"pitch":0.5394015271729717},{"target":"22-2stock-treppe1","yaw":1.049907762276323,"pitch":0.4639144104205464}]},"13-treppe2-2stock":{"name":"Treppe2-2.Stock","file":"images/13-treppe2-2stock.jpg","links":[{"target":"14-2stock-1","yaw":0.18504946764360852,"pitch":0.7367638459415264},{"target":"6-treppenhaus-2-1-stock","yaw":-2.7999144966455685,"pitch":0.9242825055101314},{"target":"23-3stock-1","yaw":-1.3639138484646232,"pitch":0.5312718683509416}]},"14-2stock-1":{"name":"2.Stock 1","file":"images/14-2stock-1.jpg","links":[{"target":"15-2stock-2","yaw":0.6953391205030659,"pitch":0.575634662549108},{"target":"16-2stock-3","yaw":-0.877262781861301,"pitch":0.6287116920832254},{"target":"13-treppe2-2stock","yaw":2.9094160170825445,"pitch":0.7952892610061681},{"target":"23-3stock-1","yaw":-2.7267357045374396,"pitch":0.40386613795961956}]},"15-2stock-2":{"name":"2.Stock 2","file":"images/15-2stock-2.jpg","links":[{"target":"47-raum-209","yaw":-0.10471117989488299,"pitch":0.4357416350530894},{"target":"14-2stock-1","yaw":2.8040823163136226,"pitch":0.6724487696754391}]},"16-2stock-3":{"name":"2.Stock 3","file":"images/16-2stock-3.jpg","links":[{"target":"14-2stock-1","yaw":3.1037030678074915,"pitch":0.4785399012884568},{"target":"48-raum-213","yaw":-0.8352344383896764,"pitch":0.9162712441602014},{"target":"17-2stock-4","yaw":0.608240203129748,"pitch":0.7162332877929902},{"target":"19-2stock-6","yaw":-0.1004927203447572,"pitch":0.2782053975761727}]},"17-2stock-4":{"name":"2.Stock 4","file":"images/17-2stock-4.jpg","links":[{"target":"18-2stock-5","yaw":-0.01803287072096893,"pitch":0.23843560167481748},{"target":"16-2stock-3","yaw":-3.0833324068877133,"pitch":0.259852736399278}]},"18-2stock-5":{"name":"2.Stock 5","file":"images/18-2stock-5.jpg","links":[{"target":"17-2stock-4","yaw":-3.092813235213214,"pitch":0.22255191053165113},{"target":"22-2stock-treppe1","yaw":-0.4602186435675826,"pitch":0.6291487843669135},{"target":"49-sekretariat","yaw":-0.18679328513516857,"pitch":0.37043266609394365}]},"19-2stock-6":{"name":"2.Stock 6","file":"images/19-2stock-6.jpg","links":[{"target":"20-2-stock-7","yaw":0.06735531045837106,"pitch":0.2247707538569763},{"target":"16-2stock-3","yaw":-2.9990882409242197,"pitch":0.19278252700032716}]},"20-2-stock-7":{"name":"2. Stock 7","file":"images/20-2-stock-7.jpg","links":[{"target":"21-2stock-8","yaw":-0.4202021150826347,"pitch":0.3276638987335492},{"target":"19-2stock-6","yaw":2.7166758634347055,"pitch":0.25286278800895623}]},"21-2stock-8":{"name":"2.Stock 8","file":"images/21-2stock-8.jpg","links":[{"target":"9-1stock-3","yaw":-1.4781511421309688,"pitch":0.7802787808337861},{"target":"20-2-stock-7","yaw":-3.1297553267791436,"pitch":0.3276925729370568},{"target":"33-treppenhaus-3","yaw":-0.627269361772246,"pitch":0.533310914572251}]},"22-2stock-treppe1":{"name":"2.Stock-Treppe1","file":"images/22-2stock-treppe1.jpg","links":[{"target":"1-eingangsbereich","yaw":3.0334776846395783,"pitch":0.7061535496371683},{"target":"18-2stock-5","yaw":-0.02034767926761738,"pitch":0.578099625162281},{"target":"34-3stock-treppe1","yaw":0.8681548472344858,"pitch":0.574520401407737}]},"23-3stock-1":{"name":"3.Stock 1","file":"images/23-3stock-1.jpg","links":[{"target":"24-3stock-2","yaw":-0.9357374992072263,"pitch":0.49375289570718905},{"target":"13-treppe2-2stock","yaw":-3.051714082370818,"pitch":0.5855531720482166}]},"24-3stock-2":{"name":"3.Stock 2","file":"images/24-3stock-2.jpg","links":[{"target":"25-3stock-3","yaw":1.1373453222860803,"pitch":0.6965397527012591},{"target":"23-3stock-1","yaw":-2.8849149141193706,"pitch":0.4798142679232029},{"target":"29-3stock-7-physiksaal","yaw":0.12234081458403523,"pitch":0.467737122787657}]},"25-3stock-3":{"name":"3.Stock 3","file":"images/25-3stock-3.jpg","links":[{"target":"50-smv-cafe","yaw":-1.1734366868264754,"pitch":0.8014631636511798},{"target":"24-3stock-2","yaw":-2.741405775062704,"pitch":0.5124299962942409},{"target":"26-3stock-4","yaw":-0.040782562786525034,"pitch":0.7881244793655622}]},"26-3stock-4":{"name":"3.Stock 4","file":"images/26-3stock-4.jpg","links":[{"target":"27-3stock-5-computerraum","yaw":0.08785976286594988,"pitch":0.2722006927509302},{"target":"25-3stock-3","yaw":-2.9339323032449833,"pitch":0.21087239104623023}]},"27-3stock-5-computerraum":{"name":"3.Stock 5 (Computerraum)","file":"images/27-3stock-5-computerraum.jpg","links":[{"target":"28-3stock-6-bibiliotek","yaw":1.2781642496338819,"pitch":0.6148261649359412},{"target":"26-3stock-4","yaw":3.137396560771725,"pitch":0.1534779502773418},{"target":"34-3stock-treppe1","yaw":-3.016800334634567,"pitch":0.379064217420396}]},"28-3stock-6-bibiliotek":{"name":"3.Stock 6 (Bibiliotek)","file":"images/28-3stock-6-bibiliotek.jpg","links":[{"target":"27-3stock-5-computerraum","yaw":2.9612073733145117,"pitch":0.1981937712800388}]},"29-3stock-7-physiksaal":{"name":"3.Stock 7 (Physiksaal)","file":"images/29-3stock-7-physiksaal.jpg","links":[{"target":"30-3stock-8","yaw":0.13282965005817182,"pitch":0.2666858612816121},{"target":"24-3stock-2","yaw":-2.932091415669751,"pitch":0.4830855094941988},{"target":"59-physiksaal","yaw":-1.0649425910041046,"pitch":0.7317206164519767}]},"30-3stock-8":{"name":"3.Stock 8","file":"images/30-3stock-8.jpg","links":[{"target":"31-3stock-9","yaw":0.17168318365823332,"pitch":0.23624089253273084},{"target":"29-3stock-7-physiksaal","yaw":-2.982543300849361,"pitch":0.34607975448363426}]},"31-3stock-9":{"name":"3.Stock 9","file":"images/31-3stock-9.jpg","links":[{"target":"32-3stock-10-chemiesaal","yaw":0.0829865386488624,"pitch":0.20703596600148977},{"target":"30-3stock-8","yaw":-3.042119008619082,"pitch":0.30193384325945516}]},"32-3stock-10-chemiesaal":{"name":"3.Stock 10 (Chemiesaal)","file":"images/32-3stock-10-chemiesaal.jpg","links":[{"target":"52-vape-plakat","yaw":-0.019989816766234014,"pitch":0.48264831170096834},{"target":"31-3stock-9","yaw":-3.1266263365873375,"pitch":0.19993433768276603},{"target":"55-chemiesaal","yaw":-1.5692808443397013,"pitch":0.8207623894657736}]},"33-treppenhaus-3":{"name":"Treppenhaus 3","file":"images/33-treppenhaus-3.jpg","links":[{"target":"21-2stock-8","yaw":0.35675774949100436,"pitch":0.788532436600045},{"target":"52-vape-plakat","yaw":-1.2988386811338195,"pitch":0.3011555562567594}]},"34-3stock-treppe1":{"name":"3.Stock-Treppe1","file":"images/34-3stock-treppe1.jpg","links":[{"target":"27-3stock-5-computerraum","yaw":-0.08262328250411599,"pitch":0.49724052568906885},{"target":"26-3stock-4","yaw":0.30570314171558977,"pitch":0.47696230814809937},{"target":"22-2stock-treppe1","yaw":-3.139070807909878,"pitch":0.6912011831466316}]},"35-treppe1-keller":{"name":"Treppe1-Keller","file":"images/35-treppe1-keller.jpg","links":[{"target":"36-keller-1","yaw":-0.0458342927865143,"pitch":0.7349208950761632},{"target":"1-eingangsbereich","yaw":-1.3984153942893318,"pitch":0.4358408733159802}]},"36-keller-1":{"name":"Keller 1","file":"images/36-keller-1.jpg","links":[{"target":"35-treppe1-keller","yaw":2.8428363618319334,"pitch":0.0984990591865813},{"target":"37-keller-2","yaw":0.9405311867430495,"pitch":0.6970433413551351}]},"37-keller-2":{"name":"Keller 2","file":"images/37-keller-2.jpg","links":[{"target":"38-keller-3-treppe-2","yaw":0.338771670597092,"pitch":0.2709054778141393},{"target":"36-keller-1","yaw":3.1365335355003507,"pitch":0.44884935005341653}]},"38-keller-3-treppe-2":{"name":"Keller 3-Treppe 2","file":"images/38-keller-3-treppe-2.jpg","links":[{"target":"5-treppenhaus-2","yaw":-0.7213601371692473,"pitch":0.7838561799089145},{"target":"39-keller-4-chemiesaal","yaw":0.591989055240564,"pitch":0.6520129069838987},{"target":"37-keller-2","yaw":2.8909489622693725,"pitch":0.2800747382254869}]},"39-keller-4-chemiesaal":{"name":"Keller 4-Chemiesaal","file":"images/39-keller-4-chemiesaal.jpg","links":[{"target":"38-keller-3-treppe-2","yaw":-3.090726689252529,"pitch":0.3141667721440271},{"target":"40-keller5","yaw":0.00952026515185267,"pitch":0.26801861417663986}]},"40-keller5":{"name":"Keller5","file":"images/40-keller5.jpg","links":[{"target":"46-raum-017","yaw":-0.5566156110069631,"pitch":0.7323725717710019},{"target":"41-keller6-treppe3","yaw":0.06537355098812903,"pitch":0.39978424940014},{"target":"39-keller-4-chemiesaal","yaw":-3.0158538907140056,"pitch":0.2863194643734204}]},"41-keller6-treppe3":{"name":"Keller6-Treppe3","file":"images/41-keller6-treppe3.jpg","links":[{"target":"40-keller5","yaw":-3.1322287101148607,"pitch":0.3878861051672615},{"target":"42-keller-7","yaw":-0.016933510354951054,"pitch":0.16453004674378846}]},"42-keller-7":{"name":"Keller 7","file":"images/42-keller-7.jpg","links":[{"target":"43-keller8","yaw":-0.886460865262169,"pitch":0.4545319355589186},{"target":"41-keller6-treppe3","yaw":-2.9387430548500717,"pitch":0.18066888516698754}]},"43-keller8":{"name":"Keller8","file":"images/43-keller8.jpg","links":[{"target":"45-keller-10","yaw":-0.297993721832869,"pitch":0.3868964786344833},{"target":"44-keller-9-treppe4","yaw":0.6553458556198049,"pitch":0.4232860142835406},{"target":"42-keller-7","yaw":-2.90947437616288,"pitch":0.5850491822271024}]},"44-keller-9-treppe4":{"name":"Keller 9-treppe4","file":"images/44-keller-9-treppe4.jpg","links":[{"target":"43-keller8","yaw":-3.055359675655904,"pitch":0.21619865420766793},{"target":"51-technologieraum-erdgeschoss","yaw":0.06043588910482356,"pitch":0.26093929084117207}]},"45-keller-10":{"name":"Keller 10","file":"images/45-keller-10.jpg","links":[{"target":"43-keller8","yaw":-3.0886002395540615,"pitch":0.3324002109290092},{"target":"63-gang-3","yaw":-0.7115879620894088,"pitch":0.5233305695456689}]},"46-raum-017":{"name":"Raum 017","file":"images/46-raum-017.jpg","links":[{"target":"40-keller5","yaw":-2.833599804820203,"pitch":0.4219780466798593}]},"47-raum-209":{"name":"Raum 209","file":"images/47-raum-209.jpg","links":[{"target":"15-2stock-2","yaw":2.9564602536869273,"pitch":0.32965643434115677}]},"48-raum-213":{"name":"Raum 213","file":"images/48-raum-213.jpg","links":[{"target":"16-2stock-3","yaw":3.1227399275247505,"pitch":0.4287508518642049}]},"49-sekretariat":{"name":"Sekretariat","file":"images/49-sekretariat.jpg","links":[{"target":"18-2stock-5","yaw":-2.9536163114447245,"pitch":0.483500972394566}]},"50-smv-cafe":{"name":"SMV-Cafe","file":"images/50-smv-cafe.jpg","links":[{"target":"25-3stock-3","yaw":3.031377712350305,"pitch":0.6886753423769871}]},"51-technologieraum-erdgeschoss":{"name":"Technologieraum-Erdgeschoss","file":"images/51-technologieraum-erdgeschoss.jpg","links":[{"target":"44-keller-9-treppe4","yaw":-2.98699274160915,"pitch":0.6352005634821456},{"target":"64-gang-4","yaw":-0.5067015462020095,"pitch":0.7624363105681162}]},"52-vape-plakat":{"name":"Vape-Plakat","file":"images/52-vape-plakat.jpg","links":[{"target":"32-3stock-10-chemiesaal","yaw":-1.5219181182769006,"pitch":0.6039736205931518},{"target":"33-treppenhaus-3","yaw":1.7853284417685096,"pitch":0.4063175514594466}]},"53-chemie-aussstattung-1":{"name":"Chemie-aussstattung 1","file":"images/53-chemie-aussstattung-1.jpg","links":[{"target":"54-chemie-ausstattung-2","yaw":2.010328267889732,"pitch":0.44826801498591884},{"target":"57-phayik-ausstattung-3","yaw":-1.0313825874999782,"pitch":0.45868112250975557}]},"54-chemie-ausstattung-2":{"name":"Chemie-ausstattung 2","file":"images/54-chemie-ausstattung-2.jpg","links":[{"target":"56-chemie-vorbereitung","yaw":2.2416564174414173,"pitch":0.4178464567027298},{"target":"53-chemie-aussstattung-1","yaw":-0.9227733280395665,"pitch":0.48408414158636504}]},"55-chemiesaal":{"name":"Chemiesaal","file":"images/55-chemiesaal.jpg","links":[{"target":"56-chemie-vorbereitung","yaw":-1.9891970646627932,"pitch":0.42012179862049237},{"target":"32-3stock-10-chemiesaal","yaw":-2.4734245794511,"pitch":0.5112474789197652}]},"56-chemie-vorbereitung":{"name":"Chemie-vorbereitung","file":"images/56-chemie-vorbereitung.jpg","links":[{"target":"55-chemiesaal","yaw":1.5481920395202726,"pitch":0.3310538650943897},{"target":"54-chemie-ausstattung-2","yaw":-1.3825328394982908,"pitch":0.7779883132183336}]},"57-phayik-ausstattung-3":{"name":"Phayik-ausstattung 3","file":"images/57-phayik-ausstattung-3.jpg","links":[{"target":"53-chemie-aussstattung-1","yaw":2.055878630473048,"pitch":0.32338802002567313},{"target":"58-physik-ausstattung-1","yaw":-1.003476804765203,"pitch":0.9278659832537777}]},"58-physik-ausstattung-1":{"name":"Physik-ausstattung 1","file":"images/58-physik-ausstattung-1.jpg","links":[{"target":"57-phayik-ausstattung-3","yaw":1.796068928322894,"pitch":0.4589299258745232},{"target":"59-physiksaal","yaw":-1.4521676773152343,"pitch":0.5627411137811205}]},"59-physiksaal":{"name":"Physiksaal","file":"images/59-physiksaal.jpg","links":[{"target":"29-3stock-7-physiksaal","yaw":2.9199906444905643,"pitch":0.470059564609663},{"target":"58-physik-ausstattung-1","yaw":1.9152981504162323,"pitch":0.3584525021096905}]},"60-cafeteria":{"name":"Cafeteria","file":"images/60-cafeteria.jpg","links":[{"target":"63-gang-3","yaw":-1.081862908231054,"pitch":0.1922680986940115},{"target":"62-gang-2","yaw":2.7468070038184482,"pitch":0.18697606695731217}]},"61-gang-1":{"name":"Gang 1","file":"images/61-gang-1.jpg","links":[{"target":"62-gang-2","yaw":-0.06360837959993049,"pitch":0.20372187330294977},{"target":"4-erdgeschoss-3","yaw":-3.137666660767522,"pitch":0.27276546382549327}]},"62-gang-2":{"name":"Gang 2","file":"images/62-gang-2.jpg","links":[{"target":"60-cafeteria","yaw":0.08520187414737812,"pitch":0.18874377290294042},{"target":"61-gang-1","yaw":-3.0681519233871146,"pitch":0.10612790005781925}]},"63-gang-3":{"name":"Gang 3","file":"images/63-gang-3.jpg","links":[{"target":"45-keller-10","yaw":1.7688399474152883,"pitch":0.4581872141961867},{"target":"64-gang-4","yaw":0.006591711400277589,"pitch":0.19176035118892898},{"target":"60-cafeteria","yaw":2.8609941081235775,"pitch":0.24303673070207665}]},"64-gang-4":{"name":"Gang 4","file":"images/64-gang-4.jpg","links":[{"target":"51-technologieraum-erdgeschoss","yaw":0.4081074169738823,"pitch":0.22569952455320674},{"target":"63-gang-3","yaw":-2.6890631092609247,"pitch":0.28698254189573014}]}};
+let currentSceneId = "0-haupteingang";
+
+const canvas = document.getElementById("canvas");
+const support = document.getElementById("support");
+const sceneName = document.getElementById("sceneName");
+const targets = document.getElementById("targets");
+const vrStart = document.getElementById("vrStart");
+
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.xr.enabled = true;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75,1,0.1,1100);
+camera.position.set(0,0,0);
+
+const panoramaGeometry = new THREE.SphereGeometry(100,96,64);
+panoramaGeometry.scale(-1,1,1);
+const panoramaMaterial = new THREE.MeshBasicMaterial({color:0xffffff});
+const panorama = new THREE.Mesh(panoramaGeometry, panoramaMaterial);
+
+// Important: Three.js' equirectangular UV zero differs from the Marzipano yaw zero.
+// Rotating the sphere -90° makes panorama center correspond to yaw = 0.
+panorama.rotation.y = -Math.PI / 2;
+scene.add(panorama);
+
+const hotspotGroup = new THREE.Group();
+scene.add(hotspotGroup);
+
+const loader = new THREE.TextureLoader();
+const textureCache = new Map();
+
+function makeArrowTexture(color="#ffffff"){
+  const c=document.createElement("canvas");
+  c.width=256;c.height=256;
+  const x=c.getContext("2d");
+  x.clearRect(0,0,256,256);
+  x.beginPath();
+  x.arc(128,128,92,0,Math.PI*2);
+  x.fillStyle="rgba(0,0,0,.48)";
+  x.fill();
+  x.lineWidth=10;
+  x.strokeStyle=color;
+  x.stroke();
+  x.beginPath();
+  x.moveTo(128,52); x.lineTo(198,132); x.lineTo(158,132);
+  x.lineTo(158,194); x.lineTo(98,194); x.lineTo(98,132); x.lineTo(58,132);
+  x.closePath();
+  x.fillStyle=color;
+  x.fill();
+  const t=new THREE.CanvasTexture(c);
+  t.colorSpace=THREE.SRGBColorSpace;
+  return t;
+}
+const arrowTex = makeArrowTexture("#ffffff");
+const arrowHoverTex = makeArrowTexture("#55ff88");
+// Only arrow appearance: choose direction relative to the panorama's forward axis.
+// SpriteMaterial.rotation turns the existing arrow graphic without changing its rendering.
+function arrowRotation(yaw){
+  const a=Math.atan2(Math.sin(yaw),Math.cos(yaw));
+  if(a > Math.PI*0.75 || a < -Math.PI*0.75) return 0; // back: keep arrow pointing into hotspot, not away from it
+  if(a > Math.PI*0.25) return -Math.PI/2; // right
+  if(a < -Math.PI*0.25) return Math.PI/2; // left
+  return 0; // forward
+}
+
+
+function sphericalPosition(yaw,pitch,r=7.5){
+  const cp=Math.cos(pitch);
+  return new THREE.Vector3(
+    r*cp*Math.sin(yaw),
+    r*Math.sin(pitch),
+    -r*cp*Math.cos(yaw)
+  );
+}
+
+function clearHotspots(){
+  while(hotspotGroup.children.length) hotspotGroup.remove(hotspotGroup.children[0]);
+}
+
+function buildHotspots(){
+  clearHotspots();
+  const s=SCENES[currentSceneId];
+  targets.textContent="Erreichbar: "+s.links.map(l=>SCENES[l.target].name).join(" · ");
+  for(const link of s.links){
+    const mat=new THREE.SpriteMaterial({map:arrowTex,transparent:true,depthTest:false,depthWrite:false});
+    mat.rotation=arrowRotation(link.yaw);
+    const sprite=new THREE.Sprite(mat);
+    sprite.position.copy(sphericalPosition(link.yaw,-0.26));
+    sprite.scale.set(1.15,1.15,1.15);
+    sprite.userData.target=link.target;
+    hotspotGroup.add(sprite);
+  }
+}
+
+async function getTexture(url){
+  if(textureCache.has(url)) return textureCache.get(url);
+  const t=await loader.loadAsync(url);
+  t.colorSpace=THREE.SRGBColorSpace;
+  textureCache.set(url,t);
+  return t;
+}
+
+async function switchScene(id){
+  if(!SCENES[id]) return;
+  currentSceneId=id;
+  const s=SCENES[id];
+  sceneName.textContent=s.name;
+  panorama.material.map=await getTexture(s.file);
+  panorama.material.needsUpdate=true;
+  buildHotspots();
+}
+
+await switchScene(currentSceneId);
+
+function resize(){
+  renderer.setSize(innerWidth,innerHeight,false);
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+}
+addEventListener("resize",resize); resize();
+
+const raycaster=new THREE.Raycaster();
+const tempMatrix=new THREE.Matrix4();
+let hovered=null;
+
+function setHovered(obj){
+  if(hovered===obj) return;
+  if(hovered) hovered.material.map=arrowTex;
+  hovered=obj;
+  if(hovered) hovered.material.map=arrowHoverTex;
+}
+
+function setupController(index){
+  const controller=renderer.xr.getController(index);
+  scene.add(controller);
+  const lineGeom=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0),new THREE.Vector3(0,0,-1)]);
+  const line=new THREE.Line(lineGeom,new THREE.LineBasicMaterial({color:0x55ff88}));
+  line.scale.z=8;
+  controller.add(line);
+  controller.addEventListener("select",()=>{
+    tempMatrix.identity().extractRotation(controller.matrixWorld);
+    raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+    raycaster.ray.direction.set(0,0,-1).applyMatrix4(tempMatrix);
+    const hits=raycaster.intersectObjects(hotspotGroup.children,false);
+    if(hits.length) switchScene(hits[0].object.userData.target);
+  });
+  return controller;
+}
+const controllers=[setupController(0),setupController(1)];
+
+const mouse=new THREE.Vector2();
+canvas.addEventListener("pointerdown",(e)=>{
+  mouse.x=(e.clientX/innerWidth)*2-1;
+  mouse.y=-(e.clientY/innerHeight)*2+1;
+  raycaster.setFromCamera(mouse,camera);
+  const hits=raycaster.intersectObjects(hotspotGroup.children,false);
+  if(hits.length) switchScene(hits[0].object.userData.target);
+});
+
+let vrButton;
+if(navigator.xr){
+  try{
+    const ok=await navigator.xr.isSessionSupported("immersive-vr");
+    if(ok){
+      support.textContent="Immersive VR wird unterstützt.";
+      vrStart.disabled=false;
+      vrButton=VRButton.createButton(renderer,{optionalFeatures:["local-floor","bounded-floor"]});
+      vrButton.style.display="none";
+      document.body.appendChild(vrButton);
+      vrStart.addEventListener("click",()=>vrButton.click());
+    } else support.textContent="Dieser Browser meldet keine Unterstützung für immersive VR.";
+  } catch(e) { support.textContent="WebXR-Prüfung fehlgeschlagen: "+e.message; }
+} else support.textContent="WebXR ist in diesem Browser nicht verfügbar.";
+
+renderer.xr.addEventListener("sessionstart",()=>document.body.classList.add("invr"));
+renderer.xr.addEventListener("sessionend",()=>document.body.classList.remove("invr"));
+
+renderer.setAnimationLoop(()=>{
+  if(renderer.xr.isPresenting){
+    let best=null;
+    for(const controller of controllers){
+      tempMatrix.identity().extractRotation(controller.matrixWorld);
+      raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+      raycaster.ray.direction.set(0,0,-1).applyMatrix4(tempMatrix);
+      const hits=raycaster.intersectObjects(hotspotGroup.children,false);
+      if(hits.length){best=hits[0].object;break;}
+    }
+    setHovered(best);
+  }
+  renderer.render(scene,camera);
+});
+</script>
+</body>
+</html>

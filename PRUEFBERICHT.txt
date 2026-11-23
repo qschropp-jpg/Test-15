@@ -1,0 +1,15 @@
+SCHULRUNDGANG – 65 STANDORTE
+
+Grundlage: Letzte V2-WebXR-Version; Navigationsdaten aus dem ursprünglichen Marzipano-Export (app-files/data.js).
+Alle Link-Ziele geprüft: vorhanden.
+Nicht gegenseitige Verbindungen (Originaldaten):
+  12-1stock-treppe1 -> 22-2stock-treppe1
+  14-2stock-1 -> 23-3stock-1
+  22-2stock-treppe1 -> 1-eingangsbereich
+  34-3stock-treppe1 -> 26-3stock-4
+
+Die Bilddatei für 6-treppenhaus-2-1-stock fehlt im gelieferten Material. Hier wird die Aufnahme von Treppenhaus 2 als Ersatz angezeigt.
+
+ACHTUNG: Die räumliche Richtigkeit der Original-Verbindungen kann nicht allein aus Dateinamen bewiesen werden. Insbesondere stockwerkübergreifende Sprünge wie 9-1stock-3 -> 21-2stock-8 und 22-2stock-treppe1 -> 1-eingangsbereich sollten vor Ort überprüft werden.
+
+VR-Rendering, Texturlader, Controller und Pfeildarstellung sind unverändert aus der V2-basierten Version übernommen. Nur die Szenendaten und die UI-Beschriftung wurden erweitert.
